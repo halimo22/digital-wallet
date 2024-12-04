@@ -7,6 +7,7 @@ const app = express();
 dotenv.config();
 app.use(express.json());
 const uri = process.env.MONGO_URI;
+const port = process.env.PORT;
 const client = new MongoClient(uri);
 
 async function connectToDatabase() {
@@ -90,6 +91,6 @@ app.post("/users", async (req, res) => {
     }
 });
 
-app.listen(3000, () => {
-    console.log("Server is running on port 3000");
+app.listen(port, () => {
+    console.log("Server is running on port:" + port );
 });
