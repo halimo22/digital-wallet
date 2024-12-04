@@ -47,7 +47,7 @@ A backend for a **Digital Wallet** application, built with `Node.js` and `MongoD
 3. Create a `.env` file in the root directory with the following variables:
 
    ```env
-   MONGO_URI= # #Add Your MonogoDB URI
+   MONGO_URI=  #Add Your MonogoDB URI
    PORT=3000
    ```
 
