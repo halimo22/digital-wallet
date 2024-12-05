@@ -90,7 +90,78 @@ app.post("/users", async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 });
+app.post("/transfer", async (req, res) => {
+    const { senderEmail, recipientEmail, amount } = req.body;
+
+    if (!senderEmail || !recipientEmail || !amount) {
+        return res.status(400).json({ message: "Sender email, recipient email, and amount are required" });
+    }
+
+    if (amount <= 0) {
+        return res.status(400).json({ message: "Amount must be greater than zero" });
+    }
+
+    try {
+        const db = await connectToDatabase();
+        const usersCollection = db.collection("users");
+
+        const session = client.startSession();
+
+        // Start transaction
+        await session.withTransaction(async () => {
+            // Find sender
+            const sender = await usersCollection.findOne({ email: senderEmail });
+            if (!sender) {
+                throw new Error("Sender not found");
+            }
+
+            // Check if sender has sufficient balance
+            if (sender.balance < amount) {
+                throw new Error("Insufficient balance");
+            }
+
+            // Find recipient
+            const recipient = await usersCollection.findOne({ email: recipientEmail });
+            if (!recipient) {
+                throw new Error("Recipient not found");
+            }
+
+            // Update sender's balance
+            await usersCollection.updateOne(
+                { email: senderEmail },
+                { $inc: { balance: -amount } },
+                { session }
+            );
+
+            // Update recipient's balance
+            await usersCollection.updateOne(
+                { email: recipientEmail },
+                { $inc: { balance: amount } },
+                { session }
+            );
+
+            // Optionally, log the transaction
+            const transaction = {
+                from: senderEmail,
+                to: recipientEmail,
+                amount,
+                date: new Date(),
+            };
+
+            await db.collection("transactions").insertOne(transaction, { session });
+        });
+
+        session.endSession();
+
+        return res.status(200).json({ message: "Transaction successful" });
+    } catch (err) {
+        console.error("Error during money transfer", err);
+        return res.status(500).json({ message: err.message || "Internal server error" });
+    }
+});
 
 app.listen(port, () => {
     console.log("Server is running on port:" + port );
 });
+
+
