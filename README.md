@@ -41,7 +41,7 @@ A backend for a **Digital Wallet** application, built with `Node.js` and `MongoD
 2. Install dependencies:
 
    ```bash
-   npm install mongodb bcrypt dotenv
+   npm install 
    ```
 
 3. Create a `.env` file in the root directory with the following variables:
