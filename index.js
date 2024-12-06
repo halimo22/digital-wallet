@@ -94,6 +94,7 @@ app.post("/users", async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 });
+
 app.post("/transfer", async (req, res) => {
     const { senderEmail, recipientEmail, amount } = req.body;
 
@@ -111,40 +112,33 @@ app.post("/transfer", async (req, res) => {
 
         const session = client.startSession();
 
-        // Start transaction
         await session.withTransaction(async () => {
-            // Find sender
             const sender = await usersCollection.findOne({ email: senderEmail });
             if (!sender) {
                 throw new Error("Sender not found");
             }
 
-            // Check if sender has sufficient balance
             if (sender.balance < amount) {
                 throw new Error("Insufficient balance");
             }
 
-            // Find recipient
             const recipient = await usersCollection.findOne({ email: recipientEmail });
             if (!recipient) {
                 throw new Error("Recipient not found");
             }
 
-            // Update sender's balance
             await usersCollection.updateOne(
                 { email: senderEmail },
                 { $inc: { balance: -amount } },
                 { session }
             );
 
-            // Update recipient's balance
             await usersCollection.updateOne(
                 { email: recipientEmail },
                 { $inc: { balance: amount } },
                 { session }
             );
 
-            // Optionally, log the transaction
             const transaction = {
                 from: senderEmail,
                 to: recipientEmail,
@@ -177,7 +171,7 @@ app.post("/request-money", async (req, res) => {
         const db = await connectToDatabase();
         const transactionsCollection = db.collection("transactions");
 
-        const transactionId = uuidv4(); // Generate a unique transaction ID
+        const transactionId = uuidv4();
 
         const transaction = {
             transactionId,
@@ -188,10 +182,8 @@ app.post("/request-money", async (req, res) => {
             createdAt: new Date(),
         };
 
-        // Save the transaction to the database
         await transactionsCollection.insertOne(transaction);
 
-        // Generate a QR code
         const qrCodeData = await QRCode.toDataURL(transactionId);
 
         return res.status(201).json({
@@ -204,7 +196,6 @@ app.post("/request-money", async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 });
-
 
 app.post("/complete-transaction", async (req, res) => {
     const { transactionId, receiverEmail } = req.body;
@@ -220,7 +211,6 @@ app.post("/complete-transaction", async (req, res) => {
         const usersCollection = db.collection("users");
         const transactionsCollection = db.collection("transactions");
 
-        // Fetch the transaction
         const transaction = await transactionsCollection.findOne({ transactionId });
 
         if (!transaction) {
@@ -235,7 +225,6 @@ app.post("/complete-transaction", async (req, res) => {
             return res.status(403).json({ message: "You are not authorized to complete this transaction" });
         }
 
-        // Fetch sender and receiver
         const sender = await usersCollection.findOne({ email: transaction.senderEmail });
         const receiver = await usersCollection.findOne({ email: receiverEmail });
 
@@ -247,24 +236,20 @@ app.post("/complete-transaction", async (req, res) => {
             return res.status(400).json({ message: "Insufficient balance in receiver's account" });
         }
 
-        // Start a session for atomic updates
         const session = client.startSession();
         await session.withTransaction(async () => {
-            // Deduct amount from receiver's balance
             await usersCollection.updateOne(
                 { email: receiverEmail },
                 { $inc: { balance: -transaction.amount } },
                 { session }
             );
 
-            // Add amount to sender's balance
             await usersCollection.updateOne(
                 { email: transaction.senderEmail },
                 { $inc: { balance: transaction.amount } },
                 { session }
             );
 
-            // Mark the transaction as completed
             await transactionsCollection.updateOne(
                 { transactionId },
                 { $set: { status: "completed", completedAt: new Date() } },
@@ -281,10 +266,8 @@ app.post("/complete-transaction", async (req, res) => {
     }
 });
 
-
-// Function to encrypt card number
 function encryptCard(cardNumber) {
-    const secretKey = process.env.SECRET_KEY || 'your-encryption-key'; // Store this in .env for security
+    const secretKey = process.env.SECRET_KEY || 'your-encryption-key';
     const encrypted = CryptoJS.AES.encrypt(cardNumber, secretKey).toString();
     return encrypted;
 }
@@ -305,12 +288,10 @@ app.post("/save-card", async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Encrypt the card number
         const encryptedCard = encryptCard(cardNumber);
 
-        const last4 = cardNumber.slice(-4); // Extract last 4 digits for user display
+        const last4 = cardNumber.slice(-4);
 
-        // Add card to the user's cards array
         const newCard = {
             cardHolderName,
             last4,
@@ -319,7 +300,6 @@ app.post("/save-card", async (req, res) => {
             createdAt: new Date(),
         };
 
-        // Update user's cards array
         await usersCollection.updateOne(
             { email },
             { $push: { cards: newCard } }
@@ -331,6 +311,7 @@ app.post("/save-card", async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 });
+
 app.get("/get-cards", async (req, res) => {
     const { email } = req.query;
 
@@ -347,8 +328,7 @@ app.get("/get-cards", async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Mask card numbers except for the last 4 digits, and include card ID (_id)
-        const cards = user.cards.map(card => ({  // Include the card ID
+        const cards = user.cards.map(card => ({
             cardHolderName: card.cardHolderName,
             last4: card.last4,
             expiryDate: card.expiryDate,
@@ -379,17 +359,14 @@ app.delete("/delete-card", async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Find the card by its cardToken
         const cardIndex = user.cards.findIndex(card => card.cardToken === cardToken);
 
         if (cardIndex === -1) {
             return res.status(404).json({ message: "Card not found" });
         }
 
-        // Remove the card from the user's cards array
         user.cards.splice(cardIndex, 1);
 
-        // Update the user's cards array in the database
         await usersCollection.updateOne(
             { email },
             { $set: { cards: user.cards } }
@@ -402,14 +379,6 @@ app.delete("/delete-card", async (req, res) => {
     }
 });
 
-
-
-
-
-
-
 app.listen(port, () => {
     console.log("Server is running on port:" + port );
 });
-
-
