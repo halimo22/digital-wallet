@@ -4,7 +4,8 @@ import express from "express";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from 'uuid';
 import QRCode from 'qrcode';
-
+import crypto from 'crypto';
+import CryptoJS from 'crypto-js';
 
 const app = express();
 dotenv.config();
@@ -279,6 +280,130 @@ app.post("/complete-transaction", async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 });
+
+
+// Function to encrypt card number
+function encryptCard(cardNumber) {
+    const secretKey = process.env.SECRET_KEY || 'your-encryption-key'; // Store this in .env for security
+    const encrypted = CryptoJS.AES.encrypt(cardNumber, secretKey).toString();
+    return encrypted;
+}
+
+app.post("/save-card", async (req, res) => {
+    const { email, cardNumber, cardHolderName, expiryDate } = req.body;
+
+    if (!email || !cardNumber || !cardHolderName || !expiryDate) {
+        return res.status(400).json({ message: "All fields are required" });
+    }
+
+    try {
+        const db = await connectToDatabase();
+        const usersCollection = db.collection("users");
+
+        const user = await usersCollection.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Encrypt the card number
+        const encryptedCard = encryptCard(cardNumber);
+
+        const last4 = cardNumber.slice(-4); // Extract last 4 digits for user display
+
+        // Add card to the user's cards array
+        const newCard = {
+            cardHolderName,
+            last4,
+            cardToken: encryptedCard,
+            expiryDate,
+            createdAt: new Date(),
+        };
+
+        // Update user's cards array
+        await usersCollection.updateOne(
+            { email },
+            { $push: { cards: newCard } }
+        );
+
+        return res.status(200).json({ message: "Card saved successfully" });
+    } catch (err) {
+        console.error("Error saving card", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+});
+app.get("/get-cards", async (req, res) => {
+    const { email } = req.query;
+
+    if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+    }
+
+    try {
+        const db = await connectToDatabase();
+        const usersCollection = db.collection("users");
+
+        const user = await usersCollection.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Mask card numbers except for the last 4 digits, and include card ID (_id)
+        const cards = user.cards.map(card => ({  // Include the card ID
+            cardHolderName: card.cardHolderName,
+            last4: card.last4,
+            expiryDate: card.expiryDate,
+            createdAt: card.createdAt,
+            cardToekn: card.cardToken,
+        }));
+
+        return res.status(200).json({ cards });
+    } catch (err) {
+        console.error("Error retrieving cards", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+app.delete("/delete-card", async (req, res) => {
+    const { email, cardToken } = req.body;
+
+    if (!email || !cardToken) {
+        return res.status(400).json({ message: "Email and card token are required" });
+    }
+
+    try {
+        const db = await connectToDatabase();
+        const usersCollection = db.collection("users");
+
+        const user = await usersCollection.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Find the card by its cardToken
+        const cardIndex = user.cards.findIndex(card => card.cardToken === cardToken);
+
+        if (cardIndex === -1) {
+            return res.status(404).json({ message: "Card not found" });
+        }
+
+        // Remove the card from the user's cards array
+        user.cards.splice(cardIndex, 1);
+
+        // Update the user's cards array in the database
+        await usersCollection.updateOne(
+            { email },
+            { $set: { cards: user.cards } }
+        );
+
+        return res.status(200).json({ message: "Card deleted successfully" });
+    } catch (err) {
+        console.error("Error deleting card", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+
+
 
 
 
