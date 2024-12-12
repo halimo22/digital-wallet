@@ -55,10 +55,10 @@ app.post("/login", async (req, res) => {
 });
 
 app.post("/users", async (req, res) => {
-    const { firstName, lastName, email, password, birthday } = req.body;
+    const { fullName, username, email, password, birthday, mobilePhone } = req.body;
 
-    if (!firstName || !lastName || !email || !password || !birthday) {
-        return res.status(400).json({ message: "First name, last name, email, password, and birthday are required" });
+    if (!fullName || !username || !email || !password || !birthday || !mobilePhone) {
+        return res.status(400).json({ message: "Full name, username, email, password, birthday, and mobile phone are required" });
     }
 
     try {
@@ -70,15 +70,21 @@ app.post("/users", async (req, res) => {
             return res.status(400).json({ message: "User with this email already exists" });
         }
 
+        const existingUsername = await usersCollection.findOne({ username });
+        if (existingUsername) {
+            return res.status(400).json({ message: "Username is already taken" });
+        }
+
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         const newUser = {
-            firstName,
-            lastName,
+            fullName,
+            username,
             email,
             password: hashedPassword,
             birthday: new Date(birthday),
+            mobilePhone,
             balance: 0,
             cards: [],
             transactions: [],
