@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import 'main.dart';
+
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -17,8 +19,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   void initState() {
     super.initState();
     _checkConnection();
+    checkForSavedCredentials();
+
   }
 
+  Future<void> checkForSavedCredentials() async {
+    Map<String, String?> credentials = await getCredentials();
+    if (credentials['email'] != null && credentials['password'] != null) {
+      // Perform auto-login logic here
+      Navigator.pushNamed(context, '/home');
+    }
+  }
   Future<void> _checkConnection() async {
     const String apiUrl = 'http://127.0.0.1:3000/api/connectivity'; // Replace with your backend URL
 

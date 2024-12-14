@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'signin_screen.dart';
 import 'signup_screen.dart';
 import 'welcome_screen.dart';
 import 'home_screen.dart';
 import 'forgot_password.dart';
-import 'flutter_credit_card.dart';  // Import flutter_credit_card.dart
-import 'manage_cards.dart';  // Import ManageCardsScreen
-import 'add_new_card.dart';  // Import AddNewCardScreen
+import 'flutter_credit_card.dart'; // Import flutter_credit_card.dart
+import 'manage_cards.dart'; // Import ManageCardsScreen
+import 'add_new_card.dart'; // Import AddNewCardScreen
 import 'favorite_screen.dart';
 import 'history.dart';
 import 'transfer_screen.dart';
-// Import the CardData model
 
-void main() {
+// A singleton instance of FlutterSecureStorage
+final FlutterSecureStorage secureStorage = FlutterSecureStorage();
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(MyApp());
 }
 
@@ -26,22 +30,47 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.purple,
         scaffoldBackgroundColor: Colors.grey[200],
       ),
-      initialRoute: '/', // Set the initial route
+      initialRoute: '/',
       routes: {
-        '/': (context) => WelcomeScreen(), // Welcome or Splash Screen
-        '/signin': (context) => SignInScreen(), // Sign-In Screen
-        '/signup': (context) => SignUpScreen(), // Sign-Up Screen
-        '/home': (context) => HomeScreen(), // Main Home Screen
-        '/forgotpassword': (context) => ForgotPasswordScreen(), // Forgot Password Screen
-        '/creditcard': (context) => AddNewCardScreen(), // AddNewCardScreen for card entry
-        '/favorite': (context) => FavoriteScreen(), // Favorite Screen
-        '/history': (context) => HistoryScreen(), // History Screen
-        '/transfer': (context) => TransferScreen(), // Transfer Screen
+        '/': (context) => WelcomeScreen(),
+        '/signin': (context) => SignInScreen(),
+        '/signup': (context) => SignUpScreen(),
+        '/home': (context) => HomeScreen(),
+        '/forgotpassword': (context) => ForgotPasswordScreen(),
+        '/creditcard': (context) => AddNewCardScreen(),
+        '/favorite': (context) => FavoriteScreen(),
+        '/history': (context) => HistoryScreen(),
+        '/transfer': (context) => TransferScreen(),
         '/managecards': (context) {
           final savedCards = ModalRoute.of(context)!.settings.arguments as List<CardDatas>;
-          return ManageCards(savedCards: savedCards);  // Pass savedCards to ManageCards screen
+          return ManageCards(savedCards: savedCards);
         },
       },
     );
   }
 }
+
+// Helper functions for secure storage
+Future<void> saveCredentials(String email, String password) async {
+  await secureStorage.write(key: 'email', value: email);
+  await secureStorage.write(key: 'password', value: password);
+}
+
+Future<Map<String, String?>> getCredentials() async {
+  String? email = await secureStorage.read(key: 'email');
+  String? password = await secureStorage.read(key: 'password');
+  return {'email': email, 'password': password};
+}
+
+Future<void> deleteCredentials() async {
+  await secureStorage.delete(key: 'email');
+  await secureStorage.delete(key: 'password');
+}
+  void checkForSavedCredentials(BuildContext context) async {
+    Map<String, String?> credentials = await getCredentials();
+    if (credentials['email'] != null && credentials['password'] != null) {
+      // Navigate to home screen if credentials exist
+      Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
+

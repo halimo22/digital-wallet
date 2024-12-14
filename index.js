@@ -33,7 +33,7 @@ app.get('/api/connectivity', (req, res) => {
       timestamp: new Date().toISOString(),
     });
   });
-app.post("/login", async (req, res) => {
+  app.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -61,6 +61,7 @@ app.post("/login", async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 });
+
 
 app.post("/users", async (req, res) => {
     const { fullName, username, email, password, birthday, mobilePhone } = req.body;

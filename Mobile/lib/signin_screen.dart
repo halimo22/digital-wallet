@@ -1,11 +1,17 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import "home_screen.dart";
+
+// Secure storage instance
+final FlutterSecureStorage secureStorage = FlutterSecureStorage();
 
 class SignInScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final TextEditingController usernameController = TextEditingController();
+    final TextEditingController emailController = TextEditingController();
     final TextEditingController passwordController = TextEditingController();
 
     return Scaffold(
@@ -59,11 +65,11 @@ class SignInScreen extends StatelessWidget {
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                   SizedBox(height: 20),
-                  // Username or Phone Field
+                  // Email Field
                   TextField(
-                    controller: usernameController,
+                    controller: emailController,
                     decoration: InputDecoration(
-                      labelText: 'Username or phone number',
+                      labelText: 'Email',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -85,7 +91,6 @@ class SignInScreen extends StatelessWidget {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        // Navigate to the ForgotPasswordScreen
                         Navigator.pushNamed(context, '/forgotpassword');
                       },
                       child: Text(
@@ -100,22 +105,45 @@ class SignInScreen extends StatelessWidget {
                   SizedBox(height: 15),
                   // Sign-in Button
                   ElevatedButton(
-                    onPressed: () {
-                      final username = usernameController.text.trim();
+                    onPressed: () async {
+                      final email = emailController.text.trim();
                       final password = passwordController.text.trim();
 
-                      // Check if username is not empty and phone number has 11 digits, password has at least 8 characters
-                      if ((username.isNotEmpty || _isValidPhoneNumber(username)) && password.length >= 8) {
-                        // Navigate to home screen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => HomeScreen()),
-                        );
+                      // Check if email and password are provided
+                      if (email.isNotEmpty && password.isNotEmpty) {
+                        try {
+                          // Call the API
+                          final response = await _authenticateUser(email, password);
+
+                          if (response['message'] == 'Login successful') {
+                            // Save credentials securely
+                            await secureStorage.write(key: 'email', value: email);
+                            await secureStorage.write(key: 'password', value: password);
+
+                            // Navigate to home screen
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => HomeScreen()),
+                            );
+                          } else {
+                            // Show error message
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(response['message'] ?? 'Login failed. Please try again.')),
+                            );
+                          }
+                        } catch (e) {
+                          // Handle API call error
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('An error occurred. Please try again later.')),
+                          );
+                        }
                       } else {
-                        // Show error if validation fails
+                        // Validation error
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Please enter a valid username/phone number and password (at least 8 characters).'),
+                            content: Text(
+                              'Please enter both email and password.',
+                            ),
                           ),
                         );
                       }
@@ -168,9 +196,20 @@ class SignInScreen extends StatelessWidget {
     );
   }
 
-  // Helper function to validate phone number (should be 11 digits)
-  bool _isValidPhoneNumber(String phone) {
-    // Only check if the phone contains exactly 11 digits
-    return phone.length == 11 && RegExp(r'^\d{11}$').hasMatch(phone);
+  // Helper function to authenticate user using API
+  Future<Map<String, dynamic>> _authenticateUser(String email, String password) async {
+    final url = Uri.parse('http://localhost:3000/login'); // Replace with your API URL
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password}),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      final errorResponse = jsonDecode(response.body);
+      throw Exception(errorResponse['message'] ?? 'Failed to authenticate user');
+    }
   }
 }

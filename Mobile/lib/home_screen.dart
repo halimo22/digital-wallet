@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'add_new_card.dart'; // Adjust the path if the file is in a different directory
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+import 'add_new_card.dart';
 import 'favorite_screen.dart';
 import 'history.dart';
 import 'transfer_screen.dart';
@@ -10,8 +14,59 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Controller to manage PageView
   final PageController _pageController = PageController();
+
+  // Secure Storage instance
+  final FlutterSecureStorage secureStorage = FlutterSecureStorage();
+
+  // User data variables
+  String userName = "";
+  String userBalance = "\$0.00";
+  List<dynamic> userCards = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserData();
+  }
+
+  Future<void> fetchUserData() async {
+    try {
+      // Retrieve saved credentials
+      final email = await secureStorage.read(key: 'email');
+      final password = await secureStorage.read(key: 'password');
+
+      if (email == null || password == null) {
+        // Redirect to login if credentials are missing
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
+      // Call the login API
+      final response = await http.post(
+        Uri.parse('http://127.0.0.1:3000/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email, 'password': password}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          userName = data['user']['fullName'];
+          userBalance = "\$${data['user']['balance'].toStringAsFixed(2)}";
+          userCards = data['user']['cards'];
+          isLoading = false;
+        });
+      } else {
+        // Handle invalid credentials
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (error) {
+      print('Error fetching user data: $error');
+      Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,60 +77,54 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         title: Row(
           children: [
-            Text('Hi, Push Puttichai', style: TextStyle(fontSize: 18)),
+            Text(
+              isLoading ? 'Loading...' : 'Hi, $userName',
+              style: TextStyle(fontSize: 18),
+            ),
             Spacer(),
             Icon(Icons.notifications, color: Colors.white),
           ],
         ),
       ),
-      body: Column(
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Column(
         children: [
           // Swipeable Cards Section (PageView)
           Container(
-            height: 250, // Card height
+            height: 250,
             margin: EdgeInsets.all(16.0),
-            child: PageView(
+            child: userCards.isEmpty
+                ? Center(child: Text("No Cards Available"))
+                : PageView(
               controller: _pageController,
               scrollDirection: Axis.horizontal,
-              children: [
-                _buildCard(
-                  'John Smith',
-                  'Amazon Platinum',
-                  '4756 **** 9018',
-                  '\$3,469.52',
+              children: userCards.map((card) {
+                return _buildCard(
+                  userName,
+                  card['cardHolderName'],
+                  "**** ${card['last4']}",
+                  userBalance,
                   Colors.blue[700]!,
-                ),
-                _buildCard(
-                  'Jane Doe',
-                  'Visa Gold',
-                  '3456 **** 1234',
-                  '\$1,239.85',
-                  Colors.green[700]!,
-                ),
-                _buildCard(
-                  'Mike Tyson',
-                  'MasterCard Black',
-                  '8945 **** 6789',
-                  '\$5,100.23',
-                  Colors.red[700]!,
-                ),
-              ],
+                );
+              }).toList(),
             ),
           ),
           // Options Column
           Expanded(
             child: ListView(
-              padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+              padding:
+              EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
               children: [
-                //_buildColumnItem(Icons.account_balance_wallet, 'Account info', null),
                 SizedBox(height: 20),
                 _buildColumnItem(
                   Icons.compare_arrows,
                   'Transfer',
-                      (){
+                      () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => TransferScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => TransferScreen()),
                     );
                   },
                 ),
@@ -83,10 +132,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildColumnItem(
                   Icons.favorite,
                   'Favourites',
-                      (){
+                      () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => FavoriteScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => FavoriteScreen()),
                     );
                   },
                 ),
@@ -99,7 +149,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => AddNewCardScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => AddNewCardScreen()),
                     );
                   },
                 ),
@@ -110,7 +161,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => HistoryScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => HistoryScreen()),
                     );
                   },
                 ),
@@ -144,7 +196,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCard(String name, String cardType, String cardNumber, String balance, Color cardColor) {
+  Widget _buildCard(
+      String name, String cardType, String cardNumber, String balance, Color cardColor) {
     return Container(
       padding: EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -188,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Icon(
                 Icons.credit_card,
                 color: Colors.white,
-                size: 80, // Increased size for the credit card icon
+                size: 80,
               ),
             ],
           ),
@@ -209,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.grey.withOpacity(0.2),
               spreadRadius: 2,
               blurRadius: 5,
-              offset: Offset(0, 3), // Shadow position
+              offset: Offset(0, 3),
             ),
           ],
         ),
