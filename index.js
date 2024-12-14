@@ -6,10 +6,11 @@ import { v4 as uuidv4 } from 'uuid';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 import CryptoJS from 'crypto-js';
-
+import cors from 'cors';
 const app = express();
 dotenv.config();
 app.use(express.json());
+app.use(cors());
 const uri = process.env.MONGO_URI;
 const port = process.env.PORT;
 const client = new MongoClient(uri);
@@ -25,6 +26,13 @@ async function connectToDatabase() {
     }
 }
 
+app.get('/api/connectivity', (req, res) => {
+    res.status(200).json({
+      status: 'success',
+      message: 'Server is online',
+      timestamp: new Date().toISOString(),
+    });
+  });
 app.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
@@ -385,6 +393,6 @@ app.delete("/delete-card", async (req, res) => {
     }
 });
 
-app.listen(port, () => {
+app.listen(port,'0.0.0.0', () => {
     console.log("Server is running on port:" + port );
 });
