@@ -6,7 +6,8 @@ import 'dart:convert';
 import 'add_new_card.dart';
 import 'favorite_screen.dart';
 import 'history.dart';
-import 'transfer_screen.dart';
+import 'send_screen.dart';
+import 'receive_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -119,12 +120,23 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 SizedBox(height: 20),
                 _buildColumnItem(
-                  Icons.compare_arrows,
-                  'Transfer',
+                  Icons.send,
+                  'Send',
                       () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => TransferScreen()),
+                      MaterialPageRoute(builder: (context) => SendScreen()),
+                    );
+                  },
+                ),
+                SizedBox(height: 20),
+                _buildColumnItem(
+                  Icons.download,
+                  'Receive',
+                      () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ReceiveScreen()),
                     );
                   },
                 ),
