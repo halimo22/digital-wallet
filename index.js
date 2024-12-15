@@ -360,23 +360,23 @@ app.get("/get-transactions", async (req, res) => {
         const transactionsCollection = db.collection("transactions");
 
         const query = {
-            $or: [{ from: email }, { to: email }]
+            $or: [{ senderEmail: email }, { receiverEmail: email }]
         };
 
         // Filter by type (sent or received)
         if (type === "sent") {
-            query.from = email;
-            delete query.to; // Remove 'to' to avoid conflicts
+            query.senderEmail = email;
+            delete query.receiverEmail; // Remove receiverEmail from query
         } else if (type === "received") {
-            query.to = email;
-            delete query.from; // Remove 'from' to avoid conflicts
+            query.receiverEmail = email;
+            delete query.senderEmail; // Remove senderEmail from query
         }
 
         // Filter by date range if provided
         if (startDate || endDate) {
-            query.date = {};
-            if (startDate) query.date.$gte = new Date(startDate);
-            if (endDate) query.date.$lte = new Date(endDate);
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = new Date(startDate);
+            if (endDate) query.createdAt.$lte = new Date(endDate);
         }
 
         const transactions = await transactionsCollection.find(query).toArray();
@@ -387,6 +387,7 @@ app.get("/get-transactions", async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 });
+
 
 
 app.delete("/delete-card", async (req, res) => {
