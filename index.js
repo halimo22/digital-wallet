@@ -1,4 +1,5 @@
 import { MongoClient } from "mongodb";
+import { ObjectId } from "mongodb";
 import dotenv from 'dotenv';
 import express from "express";
 import bcrypt from "bcrypt";
@@ -174,11 +175,11 @@ app.post("/transfer", async (req, res) => {
 });
 
 app.post("/request-money", async (req, res) => {
-    const { senderEmail, receiverEmail, amount } = req.body;
+    const { receiverEmail, amount } = req.body;
 
-    if (!senderEmail || !receiverEmail || !amount || amount <= 0) {
+    if (!receiverEmail || !amount || amount <= 0) {
         return res.status(400).json({
-            message: "Sender email, receiver email, and valid amount are required",
+            message: "Receiver email and a valid amount are required",
         });
     }
 
@@ -186,23 +187,22 @@ app.post("/request-money", async (req, res) => {
         const db = await connectToDatabase();
         const transactionsCollection = db.collection("transactions");
 
-        const transactionId = uuidv4();
-
         const transaction = {
-            transactionId,
-            senderEmail,
             receiverEmail,
             amount,
+            senderEmail: null, // Placeholder for now
             status: "pending",
             createdAt: new Date(),
         };
 
-        await transactionsCollection.insertOne(transaction);
+        const result = await transactionsCollection.insertOne(transaction);
 
+        // Use MongoDB's `_id` as the unique transaction identifier
+        const transactionId = result.insertedId.toString();
         const qrCodeData = await QRCode.toDataURL(transactionId);
 
         return res.status(201).json({
-            message: "Transaction created successfully",
+            message: "Money request created successfully",
             transactionId,
             qrCode: qrCodeData,
         });
@@ -212,12 +212,13 @@ app.post("/request-money", async (req, res) => {
     }
 });
 
-app.post("/complete-transaction", async (req, res) => {
-    const { transactionId, receiverEmail } = req.body;
 
-    if (!transactionId || !receiverEmail) {
+app.post("/complete-transaction", async (req, res) => {
+    const { transactionId, senderEmail } = req.body;
+
+    if (!transactionId || !senderEmail) {
         return res.status(400).json({
-            message: "Transaction ID and receiver email are required",
+            message: "Transaction ID and sender email are required",
         });
     }
 
@@ -226,7 +227,8 @@ app.post("/complete-transaction", async (req, res) => {
         const usersCollection = db.collection("users");
         const transactionsCollection = db.collection("transactions");
 
-        const transaction = await transactionsCollection.findOne({ transactionId });
+        // Convert transactionId to an ObjectId
+        const transaction = await transactionsCollection.findOne({ _id: new ObjectId(transactionId) });
 
         if (!transaction) {
             return res.status(404).json({ message: "Transaction not found" });
@@ -236,45 +238,33 @@ app.post("/complete-transaction", async (req, res) => {
             return res.status(400).json({ message: "Transaction is already completed or canceled" });
         }
 
-        if (transaction.receiverEmail !== receiverEmail) {
-            return res.status(403).json({ message: "You are not authorized to complete this transaction" });
-        }
-
-        const sender = await usersCollection.findOne({ email: transaction.senderEmail });
-        const receiver = await usersCollection.findOne({ email: receiverEmail });
+        const sender = await usersCollection.findOne({ email: senderEmail });
+        const receiver = await usersCollection.findOne({ email: transaction.receiverEmail });
 
         if (!sender || !receiver) {
             return res.status(404).json({ message: "Sender or receiver not found" });
         }
 
-        if (receiver.balance < transaction.amount) {
-            return res.status(400).json({ message: "Insufficient balance in receiver's account" });
-        }
+        // Always proceed with the transaction, no balance check
+        await usersCollection.updateOne(
+            { email: senderEmail },
+            { $inc: { balance: -transaction.amount } }
+        );
 
-        const session = client.startSession();
-        await session.withTransaction(async () => {
-            await usersCollection.updateOne(
-                { email: receiverEmail },
-                { $inc: { balance: -transaction.amount } },
-                { session }
-            );
+        await usersCollection.updateOne(
+            { email: transaction.receiverEmail },
+            { $inc: { balance: transaction.amount } }
+        );
 
-            await usersCollection.updateOne(
-                { email: transaction.senderEmail },
-                { $inc: { balance: transaction.amount } },
-                { session }
-            );
+        // Update transaction with senderEmail and mark as completed
+        await transactionsCollection.updateOne(
+            { _id: new ObjectId(transactionId) },
+            { $set: { senderEmail, status: "completed", completedAt: new Date() } }
+        );
 
-            await transactionsCollection.updateOne(
-                { transactionId },
-                { $set: { status: "completed", completedAt: new Date() } },
-                { session }
-            );
+        return res.status(200).json({
+            message: "Transaction completed successfully",
         });
-
-        session.endSession();
-
-        return res.status(200).json({ message: "Transaction completed successfully" });
     } catch (err) {
         console.error("Error completing transaction", err);
         return res.status(500).json({ message: "Internal server error" });
