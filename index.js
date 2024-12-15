@@ -358,6 +358,47 @@ app.get("/get-cards", async (req, res) => {
     }
 });
 
+app.get("/get-transactions", async (req, res) => {
+    const { email, startDate, endDate, type } = req.query;
+
+    if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+    }
+
+    try {
+        const db = await connectToDatabase();
+        const transactionsCollection = db.collection("transactions");
+
+        const query = {
+            $or: [{ from: email }, { to: email }]
+        };
+
+        // Filter by type (sent or received)
+        if (type === "sent") {
+            query.from = email;
+            delete query.to; // Remove 'to' to avoid conflicts
+        } else if (type === "received") {
+            query.to = email;
+            delete query.from; // Remove 'from' to avoid conflicts
+        }
+
+        // Filter by date range if provided
+        if (startDate || endDate) {
+            query.date = {};
+            if (startDate) query.date.$gte = new Date(startDate);
+            if (endDate) query.date.$lte = new Date(endDate);
+        }
+
+        const transactions = await transactionsCollection.find(query).toArray();
+
+        return res.status(200).json({ transactions });
+    } catch (err) {
+        console.error("Error retrieving transactions", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+
 app.delete("/delete-card", async (req, res) => {
     const { email, cardToken } = req.body;
 
