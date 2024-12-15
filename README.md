@@ -91,5 +91,3 @@ Feel free to fork this repository, open issues, or submit pull requests to impro
 This project is licensed under the MIT License. See the `LICENSE` file for more details.
 
 ---
-
-You can expand this README later as your project grows!

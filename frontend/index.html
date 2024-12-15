@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QR Wallet Payment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body
+    class="bg-gradient-to-r from-purple-500 to-blue-500 min-h-screen flex flex-col items-center justify-center"
+  >
+    <div
+      class="text-2xl font-semibold text-gray-700 mb-14 flex items-center flex-col sm:flex-row"
+    >
+      <img
+        src="./LOGO_MOBILE_SIZE.png"
+        alt=""
+        class="w-24 h-24 pr-2 rounded-full mb-4 sm:mb-0 bg-white shadow-md mr-4"
+      />
+      <h1 class="text-6xl font-semibold text-white">Ma7fazty</h1>
+    </div>
+
+    <div
+      class="bg-white shadow-md rounded-lg p-6 max-w-md w-full shadow-xl items-center"
+    >
+      <div class="flex items-center flex-col sm:flex-row justify-between mb-6">
+        <div class="text-2xl font-semibold text-gray-700">
+          <span id="userName">user</span>
+        </div>
+        <div class="text-2xl font-semibold text-gray-700">
+          <span id="userBalance">balance</span>
+        </div>
+      </div>
+
+      <h1 class="text-2xl font-semibold text-gray-700 text-center mb-6">
+        Generate Payment QR Code
+      </h1>
+
+      <form id="qrForm" class="space-y-4">
+        <label for="amount" class="block text-gray-600 font-medium"
+          >Enter Amount:</label
+        >
+        <input
+          type="number"
+          id="amount"
+          name="amount"
+          class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+          placeholder="Enter amount here"
+          required
+        />
+
+        <button
+          type="submit"
+          class="w-full bg-blue-500 text-white font-medium py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        >
+          Generate QR Code
+        </button>
+      </form>
+
+      <div
+        id="qrCode"
+        class="mt-6 flex justify-center items-center bg-gray-50 p-4 rounded-lg shadow-inner hidden"
+      >
+        <!-- QR code will be rendered here
+         "fullName": "Alfred Saad", 
+          "username":"bgmc",
+          "email":"alfred@example.com",
+          "password":"123456",
+          "birthday":"2006-12-04",
+          "mobilePhone":"013902" 
+        
+        -->
+      </div>
+    </div>
+
+    <script>
+      async function fetchData() {
+        try {
+          const response = await fetch("http://localhost:3000/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: "alfred@example.com",
+              password: "123456",
+            }),
+          });
+
+          if (!response.ok) throw new Error("Failed to fetch user data");
+
+          const data = await response.json();
+
+          document.getElementById("userName").textContent = data.user.fullName;
+          document.getElementById(
+            "userBalance"
+          ).textContent = `$${data.user.balance}`;
+        } catch (error) {
+          console.error("Error:", error);
+          document.getElementById("userName").textContent =
+            "Error loading user";
+          document.getElementById("userBalance").textContent =
+            "Error loading balance";
+        }
+      }
+
+      fetchData();
+
+      const form = document.getElementById("qrForm");
+      const qrCodeContainer = document.getElementById("qrCode");
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        const amount = document.getElementById("amount").value;
+
+        if (!amount) return;
+
+        try {
+          const response = await fetch("http://localhost:3000/request-money", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              receiverEmail: "alfred@example.com",
+              amount: parseFloat(amount),
+            }),
+          });
+
+          if (!response.ok) {
+            console.error(response.status, data);
+            throw new Error(data.message || "Failed to create QR code");
+          }
+
+          const data = await response.json();
+          const { qrCode } = data;
+
+          qrCodeContainer.innerHTML = "";
+          qrCodeContainer.classList.remove("hidden");
+
+          const img = document.createElement("img");
+          img.src = qrCode;
+          img.alt = "Payment QR Code";
+          qrCodeContainer.appendChild(img);
+        } catch (error) {
+          console.error("Error generating QR Code:", error);
+          qrCodeContainer.innerHTML =
+            '<p class="text-red-500">Failed to generate QR Code. Please try again.</p>';
+          qrCodeContainer.classList.remove("hidden");
+        }
+      });
+    </script>
+  </body>
+</html>
