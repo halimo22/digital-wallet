@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'add_new_card.dart';
 import 'signin_screen.dart';
 import 'signup_screen.dart';
 import 'welcome_screen.dart';
 import 'home_screen.dart';
 import 'forgot_password.dart';
-import 'flutter_credit_card.dart'; // Import flutter_credit_card.dart
-import 'manage_cards.dart'; // Import ManageCardsScreen
-import 'add_new_card.dart'; // Import AddNewCardScreen
-import 'favorite_screen.dart';
-import 'history.dart';
-import 'transfer_screen.dart';
+import 'manage_cards.dart'; // Updated to match its real purpose
+import 'flutter_credit_card.dart';
 
-// A singleton instance of FlutterSecureStorage
 final FlutterSecureStorage secureStorage = FlutterSecureStorage();
 
 void main() async {
@@ -37,18 +33,13 @@ class MyApp extends StatelessWidget {
         '/signup': (context) => SignUpScreen(),
         '/home': (context) => HomeScreen(),
         '/forgotpassword': (context) => ForgotPasswordScreen(),
-        '/creditcard': (context) => AddNewCardScreen(),
-        '/favorite': (context) => FavoriteScreen(),
-        '/history': (context) => HistoryScreen(),
-        '/transfer': (context) => TransferScreen(),
-        '/managecards': (context) {
-          final savedCards = ModalRoute.of(context)!.settings.arguments as List<CardDatas>;
-          return ManageCards(savedCards: savedCards);
-        },
+        '/managecards': (context) => ManageCardsScreen(),
+        '/addcard': (context) => CreditCardPage(),
       },
     );
   }
 }
+
 
 // Helper functions for secure storage
 Future<void> saveCredentials(String email, String password) async {

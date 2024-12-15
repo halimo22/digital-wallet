@@ -23,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String userName = "";
   String userBalance = "\$0.00";
   List<dynamic> userCards = [];
+  Map<String, dynamic>? selectedCard;
   bool isLoading = true;
 
   @override
@@ -39,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (email == null || password == null) {
         // Redirect to login if credentials are missing
-        Navigator.pushReplacementNamed(context, '/login');
+        Navigator.pushReplacementNamed(context, '/signin');
         return;
       }
 
@@ -56,16 +57,23 @@ class _HomeScreenState extends State<HomeScreen> {
           userName = data['user']['fullName'];
           userBalance = "\$${data['user']['balance'].toStringAsFixed(2)}";
           userCards = data['user']['cards'];
+          selectedCard = userCards.isNotEmpty ? userCards[0] : null;
           isLoading = false;
         });
       } else {
         // Handle invalid credentials
-        Navigator.pushReplacementNamed(context, '/login');
+        Navigator.pushReplacementNamed(context, '/signin');
       }
     } catch (error) {
       print('Error fetching user data: $error');
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacementNamed(context, '/signin');
     }
+  }
+
+  void updateSelectedCard(Map<String, dynamic> card) {
+    setState(() {
+      selectedCard = card;
+    });
   }
 
   @override
@@ -94,27 +102,20 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             height: 250,
             margin: EdgeInsets.all(16.0),
-            child: userCards.isEmpty
+            child: selectedCard == null
                 ? Center(child: Text("No Cards Available"))
-                : PageView(
-              controller: _pageController,
-              scrollDirection: Axis.horizontal,
-              children: userCards.map((card) {
-                return _buildCard(
-                  userName,
-                  card['cardHolderName'],
-                  "**** ${card['last4']}",
-                  userBalance,
-                  Colors.blue[700]!,
-                );
-              }).toList(),
+                : _buildCard(
+              userName,
+              selectedCard!['cardHolderName'],
+              "**** ${selectedCard!['last4']}",
+              userBalance,
+              Colors.blue[700]!,
             ),
           ),
           // Options Column
           Expanded(
             child: ListView(
-              padding:
-              EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+              padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
               children: [
                 SizedBox(height: 20),
                 _buildColumnItem(
@@ -123,8 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (context) => TransferScreen()),
+                      MaterialPageRoute(builder: (context) => TransferScreen()),
                     );
                   },
                 ),
@@ -135,8 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (context) => FavoriteScreen()),
+                      MaterialPageRoute(builder: (context) => FavoriteScreen()),
                     );
                   },
                 ),
@@ -147,11 +146,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   Icons.credit_card,
                   'My Credit Card',
                       () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => AddNewCardScreen()),
-                    );
+                    Navigator.pushNamed(context, '/managecards').then((value) {
+                      if (value != null && value is Map<String, dynamic>) {
+                        updateSelectedCard(value);
+                      }
+                    });
                   },
                 ),
                 SizedBox(height: 20),
@@ -161,8 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (context) => HistoryScreen()),
+                      MaterialPageRoute(builder: (context) => HistoryScreen()),
                     );
                   },
                 ),
@@ -196,8 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCard(
-      String name, String cardType, String cardNumber, String balance, Color cardColor) {
+  Widget _buildCard(String name, String cardType, String cardNumber, String balance, Color cardColor) {
     return Container(
       padding: EdgeInsets.all(16.0),
       decoration: BoxDecoration(
