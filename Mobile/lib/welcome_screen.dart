@@ -20,7 +20,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     super.initState();
     _checkConnection();
     checkForSavedCredentials();
-
   }
 
   Future<void> checkForSavedCredentials() async {
@@ -30,6 +29,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       Navigator.pushNamed(context, '/home');
     }
   }
+
   Future<void> _checkConnection() async {
     const String apiUrl = 'http://127.0.0.1:3000/api/connectivity'; // Replace with your backend URL
 
@@ -61,43 +61,34 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.purple[700],
+      backgroundColor: Colors.white, // White background
       body: Center(
         child: isChecking
             ? CircularProgressIndicator(
-          color: Colors.white,
+          color: Colors.purple[700],
         )
             : isConnected
             ? Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Welcome to Mahfazty',
+              'Welcome to',
               style: TextStyle(
-                fontSize: 28,
+                fontSize: 30,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Color(0xFFD4118B), // Replaced with specific color #0788CB
               ),
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
+
+            SizedBox(height: 5), // Space between text and logo
+            GestureDetector(
+              onTap: () {
                 Navigator.pushNamed(context, '/signin');
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: Text(
-                'Get Started',
-                style: TextStyle(
-                  color: Colors.purple[700],
-                  fontSize: 18,
-                ),
+              child: Image.asset(
+                'assets/LOGO.png', // Path to your logo image
+                width: 400, // Original size
+                height: 400, // Original size
               ),
             ),
           ],
@@ -109,11 +100,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               'Unable to connect to the server.',
               style: TextStyle(
                 fontSize: 20,
-                color: Colors.white,
+                color: Colors.purple[700],
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 5),
             ElevatedButton(
               onPressed: _checkConnection,
               style: ElevatedButton.styleFrom(

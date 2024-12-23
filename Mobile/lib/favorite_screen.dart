@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'home_screen.dart';
 
-void main() {
-  runApp(FavoriteScreen());
-}
+void main() => runApp(MaterialApp(home: HomeScreen()));
+
 
 class FavoriteScreen extends StatelessWidget {
   @override
@@ -62,7 +62,17 @@ class _FavoriteAccountsScreenState extends State<FavoriteAccountsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Favorite Accounts'),
-        backgroundColor: Colors.blue,
+        backgroundColor: Colors.blue[900],
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen()),
+                  (route) => false, // Remove all previous routes
+            );
+          },
+        ),
       ),
       body: Column(
         children: [
@@ -173,7 +183,7 @@ class ContactsScreen extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('${contact.name} added to favorites')),
                 );
-                Navigator.pop(context);
+                Navigator.pop(context); // Return to the previous screen
               },
             ),
           );

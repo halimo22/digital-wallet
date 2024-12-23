@@ -1,19 +1,25 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import "home_screen.dart";
+import 'home_screen.dart';
 
-// Secure storage instance
 final FlutterSecureStorage secureStorage = FlutterSecureStorage();
 
-class SignInScreen extends StatelessWidget {
+class SignInScreen extends StatefulWidget {
+  @override
+  _SignInScreenState createState() => _SignInScreenState();
+}
+
+class _SignInScreenState extends State<SignInScreen> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  bool _isPasswordVisible = false; // Password visibility toggle
+
   @override
   Widget build(BuildContext context) {
-    final TextEditingController emailController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
-
     return Scaffold(
       backgroundColor: Colors.grey[200],
       body: Column(
@@ -23,7 +29,7 @@ class SignInScreen extends StatelessWidget {
             width: double.infinity,
             height: 125,
             decoration: BoxDecoration(
-              color: Colors.purple[700],
+              color: Color(0xFF5A3E89),
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(50),
                 bottomRight: Radius.circular(50),
@@ -76,14 +82,26 @@ class SignInScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 15),
-                  // Password Field
+                  // Password Field with Eye Icon to toggle visibility
                   TextField(
                     controller: passwordController,
-                    obscureText: true,
+                    obscureText: !_isPasswordVisible, // Toggle password visibility
                     decoration: InputDecoration(
                       labelText: 'Password',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
                       ),
                     ),
                   ),
@@ -149,7 +167,7 @@ class SignInScreen extends StatelessWidget {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple[700],
+                      backgroundColor: Color(0xFF5A3E89),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -174,7 +192,7 @@ class SignInScreen extends StatelessWidget {
                           TextSpan(
                             text: 'Sign Up',
                             style: TextStyle(
-                              color: Colors.purple[700],
+                              color: Color(0xFF5A3E89),
                               fontWeight: FontWeight.bold,
                               decoration: TextDecoration.underline,
                             ),

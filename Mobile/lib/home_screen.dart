@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
-import 'add_new_card.dart';
-import 'favorite_screen.dart';
-import 'history.dart';
 import 'send_screen.dart';
 import 'receive_screen.dart';
+import 'favorite_screen.dart';
+import 'history.dart';
+import 'rewards_screen.dart';
+import 'notification_screen.dart';  // Import your Notification screen
+import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -26,6 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> userCards = [];
   Map<String, dynamic>? selectedCard;
   bool isLoading = true;
+
+  // Notification flag
+  bool hasNewNotifications = true; // Flag to indicate new notifications
 
   @override
   void initState() {
@@ -77,6 +80,14 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Function to handle notification icon tap
+  void navigateToNotifications() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => NotificationScreen()), // Navigate to the Notification Screen
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,10 +99,30 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(
               isLoading ? 'Loading...' : 'Hi, $userName',
-              style: TextStyle(fontSize: 18),
+              style: TextStyle(
+                fontSize: 20,
+                color: Colors.white,
+              ),// Change the color here
             ),
             Spacer(),
-            Icon(Icons.notifications, color: Colors.white),
+            // Notification icon
+            IconButton(
+              icon: Icon(Icons.notifications, color: Colors.white),
+              onPressed: navigateToNotifications, // Navigate when tapped
+            ),
+            if (hasNewNotifications)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -99,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ? Center(child: CircularProgressIndicator())
           : Column(
         children: [
-          // Swipeable Cards Section (PageView)
+          // Card Display
           Container(
             height: 250,
             margin: EdgeInsets.all(16.0),
@@ -110,54 +141,63 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedCard!['cardHolderName'],
               "**** ${selectedCard!['last4']}",
               userBalance,
-              Colors.blue[700]!,
+              Colors.pink[700]!,
             ),
           ),
-          // Options Column
+          // Option Buttons
           Expanded(
-            child: ListView(
+            child: GridView(
               padding: EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 15,
+                mainAxisSpacing: 15,
+              ),
               children: [
-                SizedBox(height: 20),
-                _buildColumnItem(
-                  Icons.send,
-                  'Send',
-                      () {
+                _buildSquareButton(
+                  icon: Icons.arrow_forward,
+                  title: 'Send',
+                  onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => SendScreen()),
                     );
                   },
                 ),
-                SizedBox(height: 20),
-                _buildColumnItem(
-                  Icons.download,
-                  'Receive',
-                      () {
+                _buildSquareButton(
+                  icon: Icons.arrow_back,
+                  title: 'Receive',
+                  onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => ReceiveScreen()),
                     );
                   },
                 ),
-                SizedBox(height: 20),
-                _buildColumnItem(
-                  Icons.favorite,
-                  'Favourites',
-                      () {
+                _buildSquareButton(
+                  icon: Icons.favorite,
+                  title: 'Favourites',
+                  onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => FavoriteScreen()),
                     );
                   },
                 ),
-                SizedBox(height: 20),
-                _buildColumnItem(Icons.attach_money, 'Cash/Rewards', null),
-                SizedBox(height: 20),
-                _buildColumnItem(
-                  Icons.credit_card,
-                  'My Credit Card',
-                      () {
+                _buildSquareButton(
+                  icon: Icons.card_giftcard,
+                  title: 'Cash/Rewards',
+                  onTap: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => CashAndRewardsScreen())
+                    );
+                  },
+                ),
+                _buildSquareButton(
+                  icon: Icons.credit_card,
+                  title: 'My Cards',
+                  onTap: () {
                     Navigator.pushNamed(context, '/managecards').then((value) {
                       if (value != null && value is Map<String, dynamic>) {
                         updateSelectedCard(value);
@@ -165,11 +205,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     });
                   },
                 ),
-                SizedBox(height: 20),
-                _buildColumnItem(
-                  Icons.book,
-                  'History',
-                      () {
+                _buildSquareButton(
+                  icon: Icons.book,
+                  title: 'History',
+                  onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => HistoryScreen()),
@@ -179,28 +218,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          // Bottom Navigation
-          BottomNavigationBar(
-            currentIndex: 0,
-            items: [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home),
-                label: 'Home',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.search),
-                label: 'Search',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.mail),
-                label: 'Messages',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.settings),
-                label: 'Settings',
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -208,7 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCard(String name, String cardType, String cardNumber, String balance, Color cardColor) {
     return Container(
-      padding: EdgeInsets.all(16.0),
+      padding: EdgeInsets.all(20.0),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(20),
@@ -216,25 +233,23 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            name,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 10),
+          SizedBox(height: 45),
           Text(
             cardType,
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 28, // Fixed font size for better readability
+            ),
           ),
-          SizedBox(height: 10),
+          SizedBox(height: 35),
           Text(
             cardNumber,
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18, // Fixed font size for better readability
+            ),
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 25),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -243,14 +258,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 balance,
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 30,
+                  fontSize: 25,
                   fontWeight: FontWeight.bold,
                 ),
-              ),
-              Icon(
-                Icons.credit_card,
-                color: Colors.white,
-                size: 80,
               ),
             ],
           ),
@@ -259,10 +269,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildColumnItem(IconData icon, String title, VoidCallback? onTap) {
+  Widget _buildSquareButton({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Container(
+        padding: EdgeInsets.all(16.0),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -275,21 +290,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        child: Row(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: EdgeInsets.all(12),
-              child: Icon(icon, color: Colors.blue[700], size: 30),
-            ),
-            SizedBox(width: 16),
+            Icon(icon, color: Colors.blue[700], size: 40),
+            SizedBox(height: 8),
             Text(
               title,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
           ],
         ),
